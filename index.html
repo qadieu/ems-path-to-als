@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Em's Path to ALs</title>
+<style>
+:root {
+  --sky-day: #cfe9ff;
+  --sky-night: #1b2a4a;
+  --pink-day: #f8c8dc;
+  --pink-night: #4a1f33;
+  --green-day: #cfead6;
+  --green-night: #1f3b2d;
+  --card-day: #ffffffaa;
+  --card-night: #00000055;
+  --text-day: #24324a;
+  --text-night: #e6ecff;
+  --accent: #7aa7ff;
+}
+body {margin:0;font-family:'Courier New', monospace;transition: background 0.5s, color 0.5s; color: var(--text-day); background: var(--sky-day);}
+body.dark {color: var(--text-night); background: var(--sky-night);}
+section {min-height:100vh;padding:60px 8vw;box-sizing:border-box;}
+.card {background: var(--card-day);padding:20px;border-radius:12px;margin:20px 0;box-shadow:0 8px 0 rgba(0,0,0,0.15);}
+body.dark .card {background: var(--card-night);}
+h1,h2 {letter-spacing: 2px;}
+.bar {height:14px;background:#ddd;border-radius:8px;overflow:hidden;}
+.fill {height:100%;background: var(--accent);width:0%;transition: width 0.5s;}
+.badges {display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:15px;}
+.badge {background: linear-gradient(#fff,#dfe8ff);padding:10px;border-radius:10px;text-align:center;font-size:0.8rem;}
+body.dark .badge {background: linear-gradient(#2a355f,#0f162f);}
+#quests {background: linear-gradient(var(--pink-day), #ffdce8);}
+body.dark #quests {background: linear-gradient(var(--pink-night), #1a0a12);}
+.health-bar {position: sticky; top: 10px; background: #00000033; padding:10px; border-radius:10px; margin-bottom:20px;}
+.quest {display:flex; justify-content:space-between; align-items:center; padding:10px; margin:10px 0; border-bottom: 2px dashed #ffffff55;}
+.date {font-size:0.75rem;opacity:0.8;}
+#subjects {background: linear-gradient(var(--green-day), #e9fff0);}
+body.dark #subjects {background: linear-gradient(var(--green-night), #08140e);}
+.subject {margin-bottom:20px;}
+.toggle {position: fixed; right: 20px; bottom: 20px; padding: 10px 14px; cursor:pointer; font-family:inherit;}
+input[type=checkbox]{transform:scale(1.2);}
+</style>
+</head>
+<body>
+<button class="toggle" onclick="toggleDark()">Night Study Arc</button>
+<section id="home">
+  <div class="title">Em's Path to ALs</div>
+  <div class="card">
+    <h2>Stats</h2>
+    <div class="stat">Study Hours<div class="bar"><div class="fill" id="hoursBar"></div></div></div>
+    <div class="stat">Consistency<div class="bar"><div class="fill" id="consistencyBar"></div></div></div>
+  </div>
+  <div class="card">
+    <h2>Achievements</h2>
+    <div class="badges" id="badgeContainer"></div>
+  </div>
+</section>
+<section id="quests">
+  <div class="health-bar">Overall Progress<div class="bar"><div id="overall" class="fill"></div></div></div>
+  <div class="card" id="questList"></div>
+</section>
+<section id="subjects">
+  <div class="card">
+    <h2>Subject Progress</h2>
+    <div class="subject">Maths<div class="bar"><div class="fill" id="MathsBar"></div></div></div>
+    <div class="subject">Physics<div class="bar"><div class="fill" id="PhysicsBar"></div></div></div>
+    <div class="subject">Chemistry<div class="bar"><div class="fill" id="ChemistryBar"></div></div></div>
+  </div>
+</section>
+<script>
+let data = JSON.parse(localStorage.getItem('emsPathGame')) || {
+  dark:false,
+  quests:[
+    {name:'Vectors Practice',subject:'Maths',done:false,date:null},
+    {name:'Laws of Motion',subject:'Physics',done:false,date:null},
+    {name:'Organic Reactions',subject:'Chemistry',done:false,date:null}
+  ],
+  badges:[]
+};
+if(data.dark) document.body.classList.add('dark');
+function toggleDark(){data.dark=!data.dark;document.body.classList.toggle('dark');save();}
+function save(){localStorage.setItem('emsPathGame',JSON.stringify(data));render();}
+function toggleQuest(i){
+  const q=data.quests[i];
+  q.done=!q.done;
+  q.date=q.done?new Date().toLocaleDateString():null;
+  updateBadges();
+  save();
+}
+function updateBadges(){
+  data.badges = [];
+  if(data.quests.some(q=>q.done)) data.badges.push('First Quest');
+  if(data.quests.filter(q=>q.done).length==data.quests.length) data.badges.push('All Quests Completed');
+}
+function render(){
+  const questList = document.getElementById('questList'); questList.innerHTML='';
+  let doneCount=0;
+  data.quests.forEach((q,i)=>{
+    if(q.done) doneCount++;
+    const div=document.createElement('div'); div.className='quest';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=q.done; cb.onchange=()=>toggleQuest(i);
+    const text=document.createElement('div'); text.innerHTML=`${q.name} <div class='date'>${q.date?('Completed: '+q.date):''}</div>`;
+    div.append(cb,text); questList.appendChild(div);
+  });
+  const pct=Math.round(doneCount/data.quests.length*100);
+  document.getElementById('overall').style.width=pct+'%';
+  document.getElementById('hoursBar').style.width=(doneCount*15)+'%';
+  document.getElementById('consistencyBar').style.width=(pct*0.8)+'%';
+
+  // badges render
+  const badgeContainer=document.getElementById('badgeContainer'); badgeContainer.innerHTML='';
+  data.badges.forEach(b=>{const d=document.createElement('div'); d.className='badge'; d.textContent=b; badgeContainer.appendChild(d);});
+
+  // subjects progress
+  const subs={Maths:0,Physics:0,Chemistry:0};
+  const totals={Maths:0,Physics:0,Chemistry:0};
+  data.quests.forEach(q=>{totals[q.subject]++; if(q.done) subs[q.subject]++;});
+  ['Maths','Physics','Chemistry'].forEach(s=>{
+    const val=totals[s]?Math.round(subs[s]/totals[s]*100):0;
+    document.getElementById(s+'Bar').style.width=val+'%';
+  });
+}
+render();
+</script>
+</body>
+</html>
